@@ -1,5 +1,5 @@
 from Container import Container
-from Force import LeonardJonesForce
+from Force import SledForces
 from Integrator import VerletIntegrator
 from DistanceMatrix import DistanceMatrix
 from numpy import linspace,sqrt,mod,inf,sin,pi
@@ -10,7 +10,7 @@ class ParticleInitialize(object):
     dims = 2
     dt = .01
     self.distance_matrix = DistanceMatrix()
-    self.force		 = LeonardJonesForce(dims,self.distance_matrix)
+    self.force		 = SledForces(dims,self.distance_matrix)
     self.integrate	 = VerletIntegrator(dt,self.force)
     self.c		 = Container(self.integrate)
     c = self.c

@@ -7,7 +7,7 @@ distance_matrix : is an instance of a DistanceMatrix.  As of now there are two i
 masses : is an array of masses for each particle
 
 IN THE FUTURE maybe add velocity_distance_matrix or velocity_array... """
-from numpy import array,vstack,sum,nan,eye,unravel_index,triu,prod,tril,size,repeat
+from numpy import array,vstack,sum,nan,eye,unravel_index,triu,prod,tril,size,repeat,inf,zeros,diag,ones
 from pylab import find
 #      from IPython.core.debugger import Tracer
 #      debug_here = Tracer()
@@ -15,16 +15,31 @@ from pylab import find
 class SledForces(object):
   def __init__(self,dims,distance_matrix): # add sigma eps r_tol if needed
     self.leonardJones = LeonardJonesForce(dims,distance_matrix)
+    self.distance_matrix = distance_matrix
     self.potential_energy = 0
     self.kinetic_energy = 0
     self.acceleration = 0
+    self.dims = dims
+    self.append_m = self.leonardJones.append_m
+    self.L = array((inf,inf)) 
   
   def __call__(self,x,v,t):
-    distance_matrix = self.distance_matrix
-
-    a_leonard_jones = self.leonardJones(x,v,t)
+    distance_matrix = self.distance_matrix 
+    lj_force = self.leonardJones(x,v,t)
     self.potential_energy += self.leonardJones.potential_energy
     self.kinetic_energy += self.leonardJones.kinetic_energy
+    dx = distance_matrix(x)
+    sd_force = self.sled_springs(x)
+    return lj_force + sd_force # should handle the division by masses
+
+  def sled_springs(self,dx,k=500):
+    A = zeros((2,113,113))  # set up matrix
+    B = (diag(ones(12),k=1) + diag(ones(11),k=2) + diag(ones(12),k=-1) + diag(ones(11),k=-2)) # connect the sled
+    from IPython.core.debugger import Tracer
+    debug_here = Tracer()
+    debug_here()
+    A[100:,100:] = B
+    return array(A*dx[0]*k,A*dx[1],*k) # calculate the force
 
 class LeonardJonesForce(object):
   """ optional params
