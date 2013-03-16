@@ -7,36 +7,35 @@ from pylab import rand,randint
 from Container import Container
 class ParticleInitialize(object):
   def __init__(self,case):
-######   Params   ################
-    xlim = (10,60)
-    ylim = (-1,10)
-    n_floor = 100
-    n_sled = 13
-    start_sled = 20
-    pot_energy_lim = (-10,30)
-    kin_energy_lim = (40,70)
-    tot_energy_lim = (40,70)
-    pressure_lim = (40,70)
-    r = 2**(1./6.)
     dims = 2
     dt = .01
-
     self.distance_matrix = DistanceMatrix()
     self.force		 = SledForces(dims,self.distance_matrix)
     self.integrate	 = VerletIntegrator(dt,self.force)
     self.c		 = Container(self.integrate)
     c = self.c
     initialization = case
-    dy = r*sqrt(3)
+    xlim = (0,18)
+    ylim = (-1,5)
+    n_floor = 100
+    n_sled = 13
+    pot_energy_lim = (-10,30)
+    kin_energy_lim = (40,70)
+    tot_energy_lim = (40,70)
+    pressure_lim = (40,70)
+    
+    radius = 2**(1./6.)
+    diameter =  2.*r
+    dy = r*sqrt(3)/2.
     dx = r
     for i in range(n_floor):
       c.addParticle(float(i)*dx,0.,0.,0.,1.)
 
     for i in range(n_sled):
-      x = (2*start_sled+1)*.5*dx + i*dx
-      y = dy*(i%2) + r
+      x = dx/2. + i*dx
+      y = dy*(i%2) +
       c.addParticle(x,y,0.,0.,1.)
-      print "{}, {}".format(x,y)
+      print "{}, {}".format((i-99)*dx,dy*i%2 + dx)
 
     self.xlim            = xlim
     self.ylim            = ylim

@@ -7,7 +7,7 @@ distance_matrix : is an instance of a DistanceMatrix.  As of now there are two i
 masses : is an array of masses for each particle
 
 IN THE FUTURE maybe add velocity_distance_matrix or velocity_array... """
-from numpy import array,vstack,sum,nan,eye,unravel_index,triu,prod,tril,size,repeat,inf,zeros,diag,ones
+from numpy import array,vstack,sum,nan,eye,unravel_index,triu,prod,tril,size,repeat,inf,zeros,diag,ones,tile,isnan
 from pylab import find
 #      from IPython.core.debugger import Tracer
 #      debug_here = Tracer()
@@ -19,27 +19,47 @@ class SledForces(object):
     self.potential_energy = 0
     self.kinetic_energy = 0
     self.acceleration = 0
+    self.pressure = 0
+    self._masses = []
     self.dims = dims
-    self.append_m = self.leonardJones.append_m
     self.L = array((inf,inf)) 
+
+  def append_m(self,m):
+    self._masses.append(m)
+    self.leonardJones.append_m(m)
+
+  @property
+  def m(self):
+    return array(self._masses)
   
-  def __call__(self,x,v,t):
+  def __call__(self,x,v,t,calc_auxilary=True):
     distance_matrix = self.distance_matrix 
-    lj_force = self.leonardJones(x,v,t)
+    lj_force = self.leonardJones(x,v,t,calc_auxilary)
     self.potential_energy += self.leonardJones.potential_energy
     self.kinetic_energy += self.leonardJones.kinetic_energy
     dx = distance_matrix(x)
-    sd_force = self.sled_springs(x)
-    return lj_force + sd_force # should handle the division by masses
-
-  def sled_springs(self,dx,k=500):
-    A = zeros((2,113,113))  # set up matrix
-    B = (diag(ones(12),k=1) + diag(ones(11),k=2) + diag(ones(12),k=-1) + diag(ones(11),k=-2)) # connect the sled
+    sd_force = self.sled_springs(dx)
+    #pull_force = self.pull_sled(x,t)
+    return (lj_force + sd_force)  # This is annoying, if we indeed do have bigger masses un comment .transpose()/self.m).transpose() 
+  def pull_sled(self,x,t):
+    # we assume pull is on last index
+    force = zeros(x.shape)
     from IPython.core.debugger import Tracer
     debug_here = Tracer()
     debug_here()
+    return u - x[-1,0]
+
+  def sled_springs(self,dx,k=500):
+    n = self.dims
+    A = zeros((113,113,n))  # set up matrix
+    B = (diag(ones(12),k=1) + diag(ones(11),k=2) + diag(ones(12),k=-1) + diag(ones(11),k=-2)) # connect the sled
+    B = tile(B,(n,1,1)).transpose()  # make it n-dimensional 
     A[100:,100:] = B
-    return array(A*dx[0]*k,A*dx[1],*k) # calculate the force
+    D = (1 - 2**(1./6.+1)*(dx.T[0]**2 + dx.T[1]**2)**(-.5))*dx.T*A.T*k
+    D[isnan(D)] = 0
+    return sum(D.T,axis=1) # calculate the force
+
+    
 
 class LeonardJonesForce(object):
   """ optional params
