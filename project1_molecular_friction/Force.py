@@ -7,13 +7,13 @@ distance_matrix : is an instance of a DistanceMatrix.  As of now there are two i
 masses : is an array of masses for each particle
 
 IN THE FUTURE maybe add velocity_distance_matrix or velocity_array... """
-from numpy import array,vstack,sum,nan,eye,unravel_index,triu,prod,tril,size,repeat,inf,zeros,diag,ones,tile,isnan
+from numpy import array,vstack,sum,nan,eye,unravel_index,triu,prod,tril,size,repeat,inf,zeros,diag,ones,tile,isnan,dot
 from pylab import find
 #      from IPython.core.debugger import Tracer
 #      debug_here = Tracer()
 #      debug_here()
 class SledForces(object):
-  def __init__(self,dims,distance_matrix): # add sigma eps r_tol if needed
+  def __init__(self,dims,distance_matrix,xinit): # add sigma eps r_tol if needed
     self.leonardJones = LeonardJonesForce(dims,distance_matrix)
     self.distance_matrix = distance_matrix
     self.potential_energy = 0
@@ -22,6 +22,7 @@ class SledForces(object):
     self.pressure = 0
     self._masses = []
     self.dims = dims
+    self.xinit = xinit
     self.L = array((inf,inf)) 
 
   def append_m(self,m):
@@ -39,15 +40,25 @@ class SledForces(object):
     self.kinetic_energy += self.leonardJones.kinetic_energy
     dx = distance_matrix(x)
     sd_force = self.sled_springs(dx)
-    #pull_force = self.pull_sled(x,t)
-    return (lj_force + sd_force)  # This is annoying, if we indeed do have bigger masses un comment .transpose()/self.m).transpose() 
+    pull_force = self.pull_sled(x,t)
+    drag_force = self.drag_sled(x,v)
+    print pull_force[-1]
+    print t
+  #  print drag_force[100]
+    return (lj_force + sd_force + pull_force + drag_force)  # This is annoying, if we indeed do have bigger masses un comment .transpose()/self.m).transpose() 
+
   def pull_sled(self,x,t):
     # we assume pull is on last index
     force = zeros(x.shape)
-    from IPython.core.debugger import Tracer
-    debug_here = Tracer()
-    debug_here()
-    return u - x[-1,0]
+    u = x[-1,0] - self.xinit
+    print "u = {}".format(u)
+    force[-1,0] = 10*t - 10*u
+    return force
+
+  def drag_sled(self,x,v):
+    force = zeros(x.shape)
+    force[100] = -10*dot(x[100],v[100])*sum(x[100]**2)**-.5
+    return force
 
   def sled_springs(self,dx,k=500):
     n = self.dims
@@ -55,11 +66,10 @@ class SledForces(object):
     B = (diag(ones(12),k=1) + diag(ones(11),k=2) + diag(ones(12),k=-1) + diag(ones(11),k=-2)) # connect the sled
     B = tile(B,(n,1,1)).transpose()  # make it n-dimensional 
     A[100:,100:] = B
-    D = (1 - 2**(1./6.+1)*(dx.T[0]**2 + dx.T[1]**2)**(-.5))*dx.T*A.T*k
+    r = self.distance_matrix.radii(dx) 
+    D = (1 - 2**(1./6.+1)/r)*dx.T*A.T*k
     D[isnan(D)] = 0
     return sum(D.T,axis=1) # calculate the force
-
-    
 
 class LeonardJonesForce(object):
   """ optional params
@@ -80,10 +90,9 @@ class LeonardJonesForce(object):
     distance_matrix = self.distance_matrix
     sigma,eps,m,r_tol = self.sigma,self.eps,self._masses,self.r_tol
     dx = distance_matrix(x)		# compute distance matrix THIS IS THE MAIN TIME COMPUTATION
-    r = sum(dx**2,axis=2)**.5		# precalculate radii
-    bad_diagonal = eye(len(r),dtype='bool')
-    r[bad_diagonal] = nan		# this is to avoid division by zero
-    if (abs(r) < r_tol).any():  # This is some exception handling for forces that get out of control
+    r = distance_matrix.radii(dx)
+    bad_diagonal = isnan(r)
+    if (abs(r) < r_tol).any():		# This is some exception handling for forces that get out of control
       idx = find(abs(r) < r_tol)
       err_string = "Two points within 1e-8 of eachother r = \n"
       err_string += str(r) + "\n"
@@ -91,12 +100,12 @@ class LeonardJonesForce(object):
       for x in r.ravel()[idx]:
 	err_string += "{:.12f} \n".format(float(x))
       raise ValueError(err_string)
-    K2 = (sigma/r)**6			      # Save these constants for calculating potential energy
+    K2 = (sigma/r)**6		      # Save these constants for calculating potential energy
     K1 = K2**2 
     fmatrix = 24*eps/r*(2*K1 - K2)*dx.transpose(2,0,1)   
-    K1[bad_diagonal] = 0		      # Set diagonal back to zero.  
-    K2[bad_diagonal] = 0		      # Set diagonal back to zero.  
-    fmatrix[:,bad_diagonal] = 0		      # Set diagonal back to zero.  
+    K1[bad_diagonal] = 0	      # Set diagonal back to zero.  
+    K2[bad_diagonal] = 0	      # Set diagonal back to zero.  
+    fmatrix[:,bad_diagonal] = 0	      # Set diagonal back to zero.  
     if calc_auxilary:
       self.potential_energy = sum(triu(4*eps*(K1 - K2))) # Calculate potential energy
       self.kinetic_energy = 3/2*sum(self._masses*sum(v**2,axis=1),axis=0)/2.

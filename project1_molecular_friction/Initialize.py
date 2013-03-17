@@ -20,15 +20,16 @@ class ParticleInitialize(object):
     r = 2**(1./6.)
     dims = 2
     dt = .01
-
-    self.distance_matrix = DistanceMatrix()
-    self.force		 = SledForces(dims,self.distance_matrix)
-    self.integrate	 = VerletIntegrator(dt,self.force)
-    self.c		 = Container(self.integrate)
-    c = self.c
+##################################
     initialization = case
     dy = r*sqrt(3)
     dx = r
+    xinit = (2*start_sled+1)*.5*dx + n_sled*dx
+    self.distance_matrix = DistanceMatrix()
+    self.force = SledForces(dims,self.distance_matrix,xinit)
+    self.integrate = VerletIntegrator(dt,self.force)
+    self.c = Container(self.integrate)
+    c = self.c
     for i in range(n_floor):
       c.addParticle(float(i)*dx,0.,0.,0.,1.)
 

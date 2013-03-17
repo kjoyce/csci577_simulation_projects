@@ -22,6 +22,7 @@ class Container(object):
     self.integrator = integrator
     self.drag_corner_idx = 100
     self.pull_corner_idx = 113
+    self.t = 0
     
   def __repr__(self):
     return_string = super(Container,self).__repr__() + "\n"
@@ -81,6 +82,7 @@ class Container(object):
       raise ValueError('must pass odd numer of args greater than 2')
 
   def integrate(self):
+    self.t += self.integrator.dt
     (dx,dv) = self.integrator(self.x,self.v,self.t)
     move_from = self.drag_corner_idx
     self._x[move_from:] = (self.x + dx)[move_from:]

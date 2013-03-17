@@ -16,7 +16,7 @@ class VerletIntegrator(object):
     dt = self.dt 
     dx = (v + .5*a*dt)*dt
     xn = x + dx
-    vntemp = nan ### For a force that is velocity dependent, I don't know what to do, and this will break
+    vntemp = v  # estimate future v with present one
     dv = .5*(f(xn,vntemp,t+dt,calc_auxilary=False) + a)*dt  
     return (dx,dv)
   def backward(self,x,v,t):
