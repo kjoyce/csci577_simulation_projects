@@ -13,7 +13,7 @@ from pylab import find
 #      debug_here = Tracer()
 #      debug_here()
 class SledForces(object):
-  def __init__(self,dims,distance_matrix,xinit): # add sigma eps r_tol if needed
+  def __init__(self,dims,distance_matrix,xinit,n_sled,n_floor,load): # add sigma eps r_tol if needed
     self.leonardJones = LeonardJonesForce(dims,distance_matrix)
     self.distance_matrix = distance_matrix
     self.potential_energy = 0
@@ -24,48 +24,68 @@ class SledForces(object):
     self.dims = dims
     self.xinit = xinit
     self.L = array((inf,inf)) 
+    self._pull_force = []
+    self.n_sled = n_sled
+    self.n_floor = n_floor
+    self.load = load
 
+  def append_pull(self,f):
+    self._pull_force.append(f)
+  @property
+  def pull_force(self):
+    return array(self._pull_force)
   def append_m(self,m):
     self._masses.append(m)
     self.leonardJones.append_m(m)
-
   @property
   def m(self):
     return array(self._masses)
   
   def __call__(self,x,v,t,calc_auxilary=True):
+    load = self.load
     distance_matrix = self.distance_matrix 
     lj_force = self.leonardJones(x,v,t,calc_auxilary)
     self.potential_energy += self.leonardJones.potential_energy
     self.kinetic_energy += self.leonardJones.kinetic_energy
     dx = distance_matrix(x)
     sd_force = self.sled_springs(dx)
-    pull_force = self.pull_sled(x,t)
+    pull_force = self.pull_sled(x,t,calc_auxilary)
     drag_force = self.drag_sled(x,v)
-    print pull_force[-1]
-    print t
-  #  print drag_force[100]
-    return (lj_force + sd_force + pull_force + drag_force)  # This is annoying, if we indeed do have bigger masses un comment .transpose()/self.m).transpose() 
+    load_force = self.load_sled(x,load)
+    #print "pull force = {}".format(pull_force[-1])
+    #print "time = {}".format(t)
+    #return load_force + sd_force
+    return (lj_force + sd_force + pull_force + drag_force + load_force)  # This is annoying, if we indeed do have bigger masses un comment .transpose()/self.m).transpose() 
 
-  def pull_sled(self,x,t):
+  def load_sled(self,x,load):
+    n_floor,n_sled = self.n_floor,self.n_sled
+    force = zeros(x.shape)
+    force[n_floor:,1] = -load
+    return force
+
+  def pull_sled(self,x,t,calc_auxilary=False):
     # we assume pull is on last index
     force = zeros(x.shape)
     u = x[-1,0] - self.xinit
-    print "u = {}".format(u)
-    force[-1,0] = 10*t - 10*u
+    f = 40*(.1*t - u)
+    force[-1,0] = f
+    if calc_auxilary:
+      self.append_pull(f)
     return force
 
   def drag_sled(self,x,v):
     force = zeros(x.shape)
-    force[100] = -10*dot(x[100],v[100])*sum(x[100]**2)**-.5
+    force[self.n_floor] = -10*v[self.n_floor]
     return force
 
   def sled_springs(self,dx,k=500):
     n = self.dims
-    A = zeros((113,113,n))  # set up matrix
-    B = (diag(ones(12),k=1) + diag(ones(11),k=2) + diag(ones(12),k=-1) + diag(ones(11),k=-2)) # connect the sled
+    n_sled = self.n_sled
+    n_floor = self.n_floor
+    A = zeros((n_floor+n_sled,n_floor+n_sled,n))  # set up matrix
+    B = (diag(ones(n_sled-1),k=1) + diag(ones(n_sled-2),k=2) + diag(ones(n_sled-1),k=-1) + diag(ones(n_sled-2),k=-2)) # connect the sled
     B = tile(B,(n,1,1)).transpose()  # make it n-dimensional 
-    A[100:,100:] = B
+    A[n_floor:,n_floor:] = B
     r = self.distance_matrix.radii(dx) 
     D = (1 - 2**(1./6.+1)/r)*dx.T*A.T*k
     D[isnan(D)] = 0
@@ -99,7 +119,7 @@ class LeonardJonesForce(object):
       err_string += "\n r{} = \n".format(array(unravel_index(idx,r.shape)))
       for x in r.ravel()[idx]:
 	err_string += "{:.12f} \n".format(float(x))
-      raise ValueError(err_string)
+#      raise ValueError(err_string)
     K2 = (sigma/r)**6		      # Save these constants for calculating potential energy
     K1 = K2**2 
     fmatrix = 24*eps/r*(2*K1 - K2)*dx.transpose(2,0,1)   
