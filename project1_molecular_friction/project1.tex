@@ -10,6 +10,7 @@
 \usepackage{hyperref}
 
 \newcommand{\kry}{\mathcal K}
+\newcommand{\figref}[1]{\figurename~\ref{#1}}
 
 \title{A Microscopic Model of Friction}
 \author{Kevin Joyce}
@@ -18,9 +19,84 @@
 \begin{document}
 \maketitle
 \section{Introduction}
+
+Usually, the first indroduction to the sliding force of friction is modeled on
+a macroscopic scale by what are known as Amontons' laws of friction - (1) The
+force of friction is proportional to the the normal component of an applied
+force, and (2) that this force is independent of the surface area of
+contact\cite{ringlein}.  This model serves for a variety of surface materials,
+yet may be counter-intuitive when surfaces with ``stickiness'' are considered,
+e.g. the ahesive side of tape or the rubber sole of a tennis shoe.  Indeed,
+these serve as apparent counter-examples to the general principle of Amontons'
+law (2), and are usually explained by adding a force of adhesion to the model
+\cite{ringlein} to balance the equation.  
+
+When trying to develop these laws from first principles at a molecular level,
+the intuition of ``stickiness'' is analgous to atomic forces between atoms, and the
+notion of adhesion in order to preserve Amontons' law is logically circular. 
+The more appropriate perspective is to adapt a more general model that
+includes a ``sticky'' force and investigate why the area dependence dissapates
+as the model scales to a macroscopic level.  This question is explored in
+detail in \cite{ringlein} by constructing a computer simulation to a simple
+microscopic model for these ``sticky'' molecular forces.
+
+In this short paper, we detail the results of replicating the model described
+\cite{ringlein} via the outline provided in \cite{gould}.  We describe the
+details of this implementation in the programming language \texttt{Python} with
+the scientific libraries provided by \texttt{SciPy}.  The
+source code for this implementation with codes to animate the data and
+visualize forces is freely available to download and modify at
+\url{https://github.com/kjoyce/csci577_simulation_projects/tree/master/project1_molecular_friction}.
    
 \section{Methods and Verification} 
 
+Our implementation is built on top of the libraries \texttt{SciPy} \cite{scipy}
+with the fundamental datatype describing the position, velocity, and force on
+each particle being the so-called \texttt{NumPy} array.  
+
+Integrations of position and velocity are accomplished through the second order Verlet algorithm:
+\begin{python}
+  a = f(x,v,t)
+  dx = (v + .5*a*dt)*dt
+  dv = .5*(f(xn,vntemp,t+dt) + a)*dt  
+\end{python}
+In the above codes, $f$ represents the right-hand-side of the equations governing acceleration.  This is given by the cumulative force on each particle divided by its respective mass (in our case all masses are assumed to be 1).
+
+ Our implementation of forces follows the outline provided in
+\cite{gould}, and is built upon a more general framework for modeling the
+interaction of one-particle system given by the Lennard-Jones potential\cite{ringlein},
+$$
+  U(r) = 4\epsilon[(\sigma/r)^{12} - (\sigma/r)^6].
+$$
+In our simulation, we select parameter values of $\epsilon=1$ and $\sigma=1$.
+All quantities are assumed to be appropriately non-dimensionalized as outlined
+in \cite{ringlein}.  The cumulative force of $N$ particles due to this
+potential between each particle is calculated by storing the pair-wise signed
+vector distances between each particle in an $N\times N$ matrix.  We can recover the 
+force of particle $j$ on $i$ by evaluating the gradient of $U$ on $r_{ij}$ of
+the signed distance matrix.  By the principle of superposition, the total force
+on particle $i$ is given by 
+$$
+  \sum_{j\not=i} \nabla U( \vect r_{ij} ) = \sum_{i\not=j} -\frac{24}{\vect r_{ij}} \left[2\|\vect r_{ij}\|^{-12} - \|\vect r_{ij}\|^{-6}\right]\vect r_{ij}.
+$$ 
+This computation is particularly suited to the \texttt{NumPy} array datatype.
+
+The correctness of the Lennard-Jones force with the Verlet Algorithm was tested
+on various symmetric configurations of particles (details available in the source codes).  We also implemented
+visualizations of the implementations with the libraries provided in
+\texttt{Matplotlib}. The results of these configurations can be viewed with the
+Animation class also provided in the source codes.  
+
+We model a two dimensional surface by a triangular lattice of particles on top of an immovable stationary line of particles.  The stationary particles are spaced at a distance of $a=2^{1/6}$ apart, and the particles in the triangular lattice are spaced $2a$ apart from each other (see \figref{lattice}).  The triangular lattice of particles is held together with stiff springs ($k=500$). The left-most particle is damped with a force equal to $\vect f_d = -10(v_x,v_y)$ to help stabilize the motion.  The right-most particle is pulled horizontally by a spring ($k=40$) moving at a rate of $.1t$.  I.e.
+$$
+  \vect f_p = 40(.1t - u(t),0),
+$$
+where $u$ is the the displacement of the right-most particle from the initial time.
+\begin{figure}
+%\includegraphics{lattice.pdf}
+\includegraphics[width=.4\textwidth]{{pullforce_sled9_load30.0_time8000}.pdf}
+\label{lattice}
+\end{figure}
 \section{Analysis}
 
 \section{Conclustion}
@@ -28,5 +104,7 @@
 \begin{thebibliography}{[1]}
   \bibitem{gould} Gould, H. and Tobochnik J. and Christian, W. \emph{An Introduction to Computer Simulation Methods Second Edition Applications to Physical Systems},  Addison Wesley Publishing Group 2006, pg. 279-280.
   \bibitem{ringlein} Ringlein, J. and Robbins, M.O. \emph{Understanding and illustrating the atomic origins of friction}  American Journal of Physics, {\bf 72}, 884 (2004).
+  \bibitem{scipy} Eric Jones and Travis Oliphant and Pearu Peterson and others, \emph{{SciPy}: Open source scientific tools for {Python}}, 2001--, \url{http://www.scipy.org/}.
+  \bibitem{matplotlib} Hunter, J.D. \emph{Matplotlib: A 2D Graphics Environment}, Computing in Science \& Engineering, Vol. 9, No. 3. (2007), pp. 90-95.
 \end{thebibliography}
 \end{document}

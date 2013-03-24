@@ -60,7 +60,7 @@ class SledForces(object):
   def load_sled(self,x,load):
     n_floor,n_sled = self.n_floor,self.n_sled
     force = zeros(x.shape)
-    force[n_floor:,1] = -load
+    force[n_floor:,1] = -load/float(n_sled)
     return force
 
   def pull_sled(self,x,t,calc_auxilary=False):

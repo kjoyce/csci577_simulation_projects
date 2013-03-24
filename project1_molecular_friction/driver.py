@@ -2,7 +2,7 @@ from Animation import Container_Animation
 from Initialize import ParticleInitialize
 import matplotlib.pyplot as plt
 ########## PARAMS ###############
-num_frames = 300
+num_frames = 8000
 ekg_length = 80
 delay      = 0
 vid_format = ".mp4"
@@ -18,7 +18,7 @@ show_figs      = False
 max_forces = dict()
 run_dat = []
 for n_sled in (9,13,17):
-  for load in [5]:#(0,5): #range(-20,40,5):
+  for load in range(-20,40,5):
     if n_sled == 9 and load < 0:
       continue
     load = float(load)
