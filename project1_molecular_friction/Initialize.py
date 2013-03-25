@@ -24,7 +24,7 @@ class ParticleInitialize(object):
     dx = r
     xinit = (2*start_sled+1)*.5*dx + (n_sled-1)*dx
     self.distance_matrix = DistanceMatrix()
-    self.force = SledForces(dims,self.distance_matrix,xinit,n_sled,n_floor,load)
+    self.force = SledForces(dims,self.distance_matrix,xinit,n_sled,n_floor,float(load))
     self.integrate = VerletIntegrator(dt,self.force)
     self.c = Container(self.integrate,n_sled,n_floor)
     c = self.c

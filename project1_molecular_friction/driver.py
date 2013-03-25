@@ -18,10 +18,9 @@ show_figs      = False
 max_forces = dict()
 run_dat = []
 for n_sled in (9,13,17):
-  for load in range(-20,40,5):
+  for load in range(-20,45,5):
     if n_sled == 9 and load < 0:
       continue
-    load = float(load)
     initializer = ParticleInitialize(n_sled,load)
     c,distance_matrix,force,integrate,xlim,ylim,pull_force_lim,ave_vel_lim,case = initializer()
 
@@ -47,13 +46,14 @@ for n_sled in (9,13,17):
     plt.title("Pull Force vs. Time")
     plt.xlabel("Time (.01) (non-dimensionalized)")
     plt.ylabel("Pull Force (non-dimensionalized)")
-    plt.savefig('pullforce_'+case+'.pdf')
-    plt.figure()
-    plt.plot(range(num_frames),c.avg_velocities[0:num_frames])
-    plt.title("Average Horizontal Velocity of Structure vs. Time")
-    plt.xlabel("Time (.01) (non-dimensionalized)")
-    plt.ylabel("Ave. x-velocity (non-dimensionalized)")
-    plt.savefig('avevelocity_'+case+'.pdf')
+    plt.xlim((-15,45))
+    plt.savefig('pullforce_'+case+'_eqscale.pdf')
+#    plt.figure()
+#    plt.plot(range(num_frames),c.avg_velocities[0:num_frames])
+#    plt.title("Average Horizontal Velocity of Structure vs. Time")
+#    plt.xlabel("Time (.01) (non-dimensionalized)")
+#    plt.ylabel("Ave. x-velocity (non-dimensionalized)")
+#    plt.savefig('avevelocity_'+case+'.pdf')
     if show_figs:
       plt.show()
     run_dat.append([c,distance_matrix,force,integrate,xlim,ylim,pull_force_lim,ave_vel_lim,case]) 
@@ -66,3 +66,4 @@ import pickle
 f = open(datestr+"force_run.dump","w")
 pickle.dump([max_forces,run_dat],f)
 f.close()
+#plt.show()

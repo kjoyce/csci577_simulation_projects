@@ -3,11 +3,13 @@
 %\usepackage{tikz}
 %\usetikzlibrary{calc}
 \usepackage{amsmath, amsthm, amssymb, graphicx, setspace}
-\usepackage{subfigure}
 \usepackage{mymacros}
 \usepackage{pysyntax}
 \usepackage{verbatim}
 \usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
 
 \newcommand{\kry}{\mathcal K}
 \newcommand{\figref}[1]{\figurename~\ref{#1}}
@@ -20,27 +22,27 @@
 \maketitle
 \section{Introduction}
 
-Usually, the first indroduction to the sliding force of friction is modeled on
+Usually, the first introduction to the sliding force of friction is modeled on
 a macroscopic scale by what are known as Amontons' laws of friction - (1) The
 force of friction is proportional to the the normal component of an applied
 force, and (2) that this force is independent of the surface area of
 contact\cite{ringlein}.  This model serves for a variety of surface materials,
 yet may be counter-intuitive when surfaces with ``stickiness'' are considered,
-e.g. the ahesive side of tape or the rubber sole of a tennis shoe.  Indeed,
+e.g. the adhesive side of tape or the rubber sole of a tennis shoe.  Indeed,
 these serve as apparent counter-examples to the general principle of Amontons'
 law (2), and are usually explained by adding a force of adhesion to the model
 \cite{ringlein} to balance the equation.  
 
 When trying to develop these laws from first principles at a molecular level,
-the intuition of ``stickiness'' is analgous to atomic forces between atoms, and the
+the intuition of ``stickiness'' is analogous to atomic forces between atoms, and the
 notion of adhesion in order to preserve Amontons' law is logically circular. 
 The more appropriate perspective is to adapt a more general model that
-includes a ``sticky'' force and investigate why the area dependence dissapates
+includes a ``sticky'' force and investigate why the area dependence dissipates
 as the model scales to a macroscopic level.  This question is explored in
-detail in \cite{ringlein} by constructing a computer simulation to a simple
+detail in \cite{ringlein} by constructing a computer simulation of simple
 microscopic model for these ``sticky'' molecular forces.
 
-In this short paper, we detail the results of replicating the model described
+In this short paper, we detail the results of replicating the model described in
 \cite{ringlein} via the outline provided in \cite{gould}.  We describe the
 details of this implementation in the programming language \texttt{Python} with
 the scientific libraries provided by \texttt{SciPy}.  The
@@ -51,7 +53,7 @@ visualize forces is freely available to download and modify at
 \section{Methods and Verification} 
 
 Our implementation is built on top of the libraries \texttt{SciPy} \cite{scipy}
-with the fundamental datatype describing the position, velocity, and force on
+with the fundamental data-type describing the position, velocity, and force on
 each particle being the so-called \texttt{NumPy} array.  
 
 Integrations of position and velocity are accomplished through the second order Verlet algorithm:
@@ -64,22 +66,22 @@ In the above codes, $f$ represents the right-hand-side of the equations governin
 
  Our implementation of forces follows the outline provided in
 \cite{gould}, and is built upon a more general framework for modeling the
-interaction of one-particle system given by the Lennard-Jones potential\cite{ringlein},
+interaction of an $N$-particle system with interactions governed by the Lennard-Jones potential\cite{ringlein},
 $$
   U(r) = 4\epsilon[(\sigma/r)^{12} - (\sigma/r)^6].
 $$
 In our simulation, we select parameter values of $\epsilon=1$ and $\sigma=1$.
 All quantities are assumed to be appropriately non-dimensionalized as outlined
-in \cite{ringlein}.  The cumulative force of $N$ particles due to this
-potential between each particle is calculated by storing the pair-wise signed
-vector distances between each particle in an $N\times N$ matrix.  We can recover the 
-force of particle $j$ on $i$ by evaluating the gradient of $U$ on $r_{ij}$ of
-the signed distance matrix.  By the principle of superposition, the total force
-on particle $i$ is given by 
+in \cite{ringlein}.  The cumulative force on each particly by the other $N-1$
+particles is calculated by storing the pair-wise signed vector distances
+between the $j$-th particle and the $i$-th particle in an $N\times N$ matrix (diagonal entries are ignored).  We can recover the force of
+particle $j$ on $i$ by evaluating the gradient of $U$ on $r_{ij}$ of the signed
+distance matrix.  By the principle of superposition, the total force on
+particle $i$ is given by 
 $$
   \sum_{j\not=i} \nabla U( \vect r_{ij} ) = \sum_{i\not=j} -\frac{24}{\vect r_{ij}} \left[2\|\vect r_{ij}\|^{-12} - \|\vect r_{ij}\|^{-6}\right]\vect r_{ij}.
 $$ 
-This computation is particularly suited to the \texttt{NumPy} array datatype.
+This computation is particularly suited to the \texttt{NumPy} array data-type.
 
 The correctness of the Lennard-Jones force with the Verlet Algorithm was tested
 on various symmetric configurations of particles (details available in the source codes).  We also implemented
@@ -87,19 +89,166 @@ visualizations of the implementations with the libraries provided in
 \texttt{Matplotlib}. The results of these configurations can be viewed with the
 Animation class also provided in the source codes.  
 
-We model a two dimensional surface by a triangular lattice of particles on top of an immovable stationary line of particles.  The stationary particles are spaced at a distance of $a=2^{1/6}$ apart, and the particles in the triangular lattice are spaced $2a$ apart from each other (see \figref{lattice}).  The triangular lattice of particles is held together with stiff springs ($k=500$). The left-most particle is damped with a force equal to $\vect f_d = -10(v_x,v_y)$ to help stabilize the motion.  The right-most particle is pulled horizontally by a spring ($k=40$) moving at a rate of $.1t$.  I.e.
+We model a one dimensional surface by a triangular lattice of particles on top of an immovable stationary line of particles.  The stationary particles are spaced at a distance of $a=2^{1/6}$ apart, and the particles in the triangular lattice are spaced $2a$ apart from each other (see \figref{lattice}).  The triangular lattice of particles is held together with stiff springs ($k=500$). The left-most particle is damped with a force equal to $\vect f_d = -10(v_x,v_y)$ to help stabilize the motion.  The right-most particle is pulled horizontally by a spring ($k=40$) moving at a rate of $.1t$.  I.e.
 $$
   \vect f_p = 40(.1t - u(t),0),
 $$
-where $u$ is the the displacement of the right-most particle from the initial time.
+where $u$ is the the displacement of the right-most particle from the initial time.  A normal force is simulated by equally distributing various values of $W$ onto each particle of the lattice.  Each of the auxiliary forces were tested individually for correctness.  For example, the forces holding the lattice together were tested by turning the Lennard-Jones potential and other auxiliary forces (the drag force was tested by adding an initial velocity).
 \begin{figure}
-%\includegraphics{lattice.pdf}
-\includegraphics[width=.4\textwidth]{{pullforce_sled9_load30.0_time8000}.pdf}
+\includegraphics[width=.9\textwidth]{{lattice}.pdf}
+\caption{The triangular lattice configuration modeling a one dimensional surface pulled horizontally on the right-most particle with a moving stiff spring ($k=40$) and stabilizing velocity-damping on the left-most particle by $-10(v_x,v_y)$.}
 \label{lattice}
 \end{figure}
-\section{Analysis}
 
-\section{Conclustion}
+The interaction off all of the forces was tested by animating the position of the particles of the lattice.  In addition, each simulation plots the force on the right-most particle with respect to time and the average velocity of the lattice with respect to time.  An example of one of these plots is in \figref{forcevel}.
+\begin{figure}[t]
+  \begin{subfigure}{0.49\linewidth}
+    \includegraphics[width=\textwidth]{pullforce_sled13_load10_time8000.pdf}
+  \end{subfigure}
+  \begin{subfigure}{0.49\linewidth}
+    \includegraphics[width=\textwidth]{avevelocity_sled13_load10_time8000.pdf}
+  \end{subfigure}
+  \caption{ The force of the moving spring on the right-most particle with respect to time and the average velocity of the lattice of a lattice configuration of 13 particles, loaded by $W=10$ over 8000 time steps ($dt=.01$). }
+  \label{forcevel}
+\end{figure}
+
+\section{Analysis and Results}
+
+\begin{figure}[h]
+\begin{subfigure}{\textwidth}
+\includegraphics[width=.16\textwidth]{pullforce_sled17_load-20_time8000.pdf}
+\includegraphics[width=.16\textwidth]{pullforce_sled17_load-15_time8000.pdf}
+\includegraphics[width=.16\textwidth]{pullforce_sled17_load-10_time8000.pdf}
+\includegraphics[width=.16\textwidth]{pullforce_sled17_load-5_time8000.pdf}
+\includegraphics[width=.16\textwidth]{pullforce_sled17_load0_time8000.pdf}
+\includegraphics[width=.16\textwidth]{pullforce_sled17_load10_time8000.pdf}
+
+\includegraphics[width=.16\textwidth]{pullforce_sled17_load15_time8000.pdf}
+\includegraphics[width=.16\textwidth]{pullforce_sled17_load20_time8000.pdf}
+\includegraphics[width=.16\textwidth]{pullforce_sled17_load25_time8000.pdf}
+\includegraphics[width=.16\textwidth]{pullforce_sled17_load30_time8000.pdf}
+\includegraphics[width=.16\textwidth]{pullforce_sled17_load35_time8000.pdf}
+\includegraphics[width=.16\textwidth]{pullforce_sled17_load40_time8000.pdf}
+\caption{ Triangular lattice with 17 particles } 
+\end{subfigure}
+
+\begin{subfigure}{\textwidth}
+\includegraphics[width=.16\textwidth]{pullforce_sled13_load-20_time8000.pdf}
+\includegraphics[width=.16\textwidth]{pullforce_sled13_load-15_time8000.pdf}
+\includegraphics[width=.16\textwidth]{pullforce_sled13_load-10_time8000.pdf}
+\includegraphics[width=.16\textwidth]{pullforce_sled13_load-5_time8000.pdf}
+\includegraphics[width=.16\textwidth]{pullforce_sled13_load0_time8000.pdf}
+\includegraphics[width=.16\textwidth]{pullforce_sled13_load10_time8000.pdf}
+
+\includegraphics[width=.16\textwidth]{pullforce_sled13_load15_time8000.pdf}
+\includegraphics[width=.16\textwidth]{pullforce_sled13_load20_time8000.pdf}
+\includegraphics[width=.16\textwidth]{pullforce_sled13_load25_time8000.pdf}
+\includegraphics[width=.16\textwidth]{pullforce_sled13_load30_time8000.pdf}
+\includegraphics[width=.16\textwidth]{pullforce_sled13_load35_time8000.pdf}
+\includegraphics[width=.16\textwidth]{pullforce_sled13_load40_time8000.pdf}
+\caption{ Triangular lattice with 13 particles } 
+\end{subfigure}
+
+
+\begin{subfigure}{\textwidth}
+\begin{center}
+\includegraphics[width=.16\textwidth]{pullforce_sled9_load0_time8000.pdf}
+\includegraphics[width=.16\textwidth]{pullforce_sled9_load10_time8000.pdf}
+\includegraphics[width=.16\textwidth]{pullforce_sled9_load15_time8000.pdf}
+\includegraphics[width=.16\textwidth]{pullforce_sled9_load20_time8000.pdf}
+
+\includegraphics[width=.16\textwidth]{pullforce_sled9_load25_time8000.pdf}
+\includegraphics[width=.16\textwidth]{pullforce_sled9_load30_time8000.pdf}
+\includegraphics[width=.16\textwidth]{pullforce_sled9_load35_time8000.pdf}
+\includegraphics[width=.16\textwidth]{pullforce_sled9_load40_time8000.pdf}
+\caption{ Triangular lattice with 13 particles } 
+\end{center}
+\end{subfigure}
+
+\caption{ These plots summarize the pulling force with respect to time. Note that the frequency of oscillations seems to be independent of the load and configuration.  The y-scales are not the same in each plot.  }
+\label{allplots}
+\end{figure}
+
+\begin{figure}[H]
+\includegraphics[width=.7\textwidth]{load_maxforce.pdf}
+\caption{The maximum pull force versus the average load per particle. 
+We note that the maximum statistic is quite sensitive to outlying data, which
+may explain the seeming lack of fit of the data-point cooresponding to the load
+of 15 on the 17-configuration. Future analysis might include estimates for each
+peak in the simulation.  
+}
+\label{forceload}
+\end{figure}
+
+Simulations were preformed for the triangular lattice configurations with 9,
+13, and 17 particles.  For each configuration we simulated an equally
+distributed load, $W$, ranging from -20 to 40 by 5.  The force to overcome
+friction was estimated by taking the maximum value over 8000 integration time
+steps with $dt=.01$.  The inteval of $8000$ was choosen by initially simulating
+the maximum load ($W=40$) at successive time lengths until a suitable number of
+oscillations was observed in the force versus time plots.  
+
+We remark that the effect of adding loads to the lattice can be interpreted as
+subjecting the the particles to a graviational field that points downward.
+Hence, negative loads merely represent a weaker gravitational field.  However,
+this interpretation becomes invalid once the negative loading force
+overcomes the Lennard-Jones force.  This situation occurs for the lattice of 9
+particles, so negative loads were omitted in this situation.
+
+In \figref{allplots}, notice that the general characteristic of force building
+(nearly linearly) until the lattice becomes ``un-stuck'' and jerks forward can
+be seen in each case.  Moreover, the frequency for which this patter repeats is
+nearly the same throughout each plot.  This is to be expected, since the
+pulling force is a spring whose force is proportional to the distance from the
+pulling node.  The main feature of this figure is that it provides evidence
+that the simulation ran correctly for each case.  
+
+More telling is \figref{forceload}, in which we can see that the force required
+to pull the lattice increases nearly linearly as load increases.  Note that the
+lines appear to be parallel in the case of each configuration.  The results of
+least square fitting are given in table \ref{lstsq}
+
+\begin{table}[H]
+\begin{tabular}{c| l c c }
+lattice		& intercept & slope\\ \hline
+9-configuration & \texttt{15.2311} & \texttt{0.3767}\\
+13-configuration& \texttt{20.6507} & \texttt{0.3719}\\
+17-configuration& \texttt{26.3260} & \texttt{0.3494}\\
+\end{tabular}
+\caption{Least-square fit to each configuration. }
+\label{lstsq}
+\end{table}
+
+
+This provides evidence for two positive linear relationships - one for the average load versus
+maximum pull force and the other for the surface area versus maximum pull force. The
+linearity of the relationship between surface area and maximum pull force is inferred from the 
+roughly linear relationship between the three intercepts (and the increase of 4 particles per simulation). Again we refer to \figref{forceload} to illustrate  this relationship.
+ 
+\section{Conclusion}
+
+Our simulation agrees with the results in \cite{ringlein}, in that we have observed a positive relationship between molecular surface area and the force of static friction (linear increase of intercepts in \figref{forceload}). This relationship appears to be linear based on the three linear increase of surface area in the three simulations.  This confirms the implied intuitin in the introduction that implies a model of static friction contrary to Amonton's Law (2).  We also observed a linear relationship between an applied normal force and the force of static friction (fit of points to line in \figref{forceload}). These results together suggest that a more appropriate model for the force of molecular static friction is
+$$
+  F_s = \mu_s W + c A,
+$$ 
+where $W$ is the applied normal force,  $A$ is the surface area of contact, and $\mu_s$ and $c$ are constants of proportionality.  In our simulation we predicted these vales to be $\hat \mu_s = 0.3767$ and $\hat c = 1.0$ by averaging predicted slopes and fitting a line through the intercepts of lines in \figref{forceload}.
+
+The next question is why $c = 0$ on a macroscopic scale, reconciling with
+Amontons' original model of friction.  This question is addressed in
+\cite{ringlein}, and they attribute the lack of area dependence to the fact
+that macroscopic surfaces are quite ``rough'' and there is relatively sparse
+area of actual contact between atoms.  This reconciles with intuition regarding
+adhesion, in that adhesion becomes important when materials easily deform as in tape
+or rubber \cite{ringlein}.  
+
+A future model for this situation might
+be to model the contact surfaces in a probabilistic way so that local maxima
+are randomly distributed on each contact surface.  Although our model codes
+allows for three dimensional particle simulations, it does not scale well
+beyond about 256 particles due to the distance calculation.  Future
+optimization may make this simulation possible.
+
+
 
 \begin{thebibliography}{[1]}
   \bibitem{gould} Gould, H. and Tobochnik J. and Christian, W. \emph{An Introduction to Computer Simulation Methods Second Edition Applications to Physical Systems},  Addison Wesley Publishing Group 2006, pg. 279-280.
